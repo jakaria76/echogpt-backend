@@ -3,10 +3,12 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Security Middlewares
   app.use(helmet());
   app.enableCors({
     origin: '*',
@@ -14,8 +16,13 @@ async function bootstrap() {
     credentials: true,
   });
 
+  // Global Routing Prefix
   app.setGlobalPrefix('api/v1');
 
+  // Global Exception Filter for standardized API errors
+  app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Global Validation Pipe for Request DTOs
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -24,9 +31,12 @@ async function bootstrap() {
     }),
   );
 
+  // Swagger (OpenAPI) Documentation Setup
   const config = new DocumentBuilder()
     .setTitle('EchoGPT Backend REST API')
-    .setDescription('Production-ready backend API for EchoGPT Chrome Extension')
+    .setDescription(
+      'Production-ready backend API for EchoGPT Chrome Extension supporting Multi-AI provider orchestration, web search, subscriptions, and administrative telemetry.',
+    )
     .setVersion('1.0')
     .addBearerAuth(
       {
