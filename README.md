@@ -150,12 +150,20 @@ GROQ_API_KEY=""
 
 ---
 
-## 🚀 Local Setup & Installation
+## 🚀 Local Setup & Installation (Without Docker)
+
+### Prerequisites
+
+- **Node.js:** `v20.x` or higher
+- **PostgreSQL:** Running locally on port `5432` (or your configured port)
+
+### Steps
 
 1. **Clone the repository:**
 
    ```bash
    git clone 'https://github.com/jakaria76/echogpt-backend.git'
+
    cd echogpt-backend
    ```
 
@@ -165,44 +173,109 @@ GROQ_API_KEY=""
    npm install
    ```
 
-3. **Run Prisma Migrations:**
+3. **Configure Environment Variables:**
+
+   Create a `.env` file in the root directory and configure your credentials:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+4. **Run Prisma Migrations & Generate Client:**
 
    ```bash
    npx prisma migrate dev --name init
+   npx prisma generate
    ```
 
-4. **Launch development server:**
+5. **Launch development server:**
 
    ```bash
    npm run start:dev
    ```
 
-5. **Access the API:**
+6. **Launch Prisma Studio (Optional GUI for Database):**
 
-   - **REST API Base URL:** `http://localhost:3000/api/v1`
-   - **Interactive Swagger Documentation:** `http://localhost:3000/api/docs`
+   ```bash
+   npx prisma studio
+   ```
 
 ---
 
-## 🐳 Running via Docker
+## 🐳 Running via Docker (Recommended)
 
-To spin up both the NestJS API application and the PostgreSQL database in isolated containers:
+Docker Compose simplifies setup by provisioning the **PostgreSQL Database**, **NestJS API**, and **Prisma Studio** simultaneously in isolated containers with zero manual configuration.
 
-```bash
-# Build and run containers in detached mode
-docker-compose up --build -d
+### Prerequisites
 
-# Inspect running containers
-docker-compose ps
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
 
-# View logs
-docker-compose logs -f
+### Quick Start
 
-# Stop containers
-docker-compose down
+1. **Build and launch all services in detached mode:**
+
+   ```bash
+   docker compose up --build -d
+   ```
+
+2. **Verify running containers:**
+
+   ```bash
+   docker compose ps
+   ```
+
+3. **View live application logs:**
+
+   ```bash
+   # Stream all logs
+   docker compose logs -f
+
+   # Stream only API logs
+   docker compose logs -f api
+   ```
+
+4. **Stop all containers:**
+
+   ```bash
+   docker compose down
+   ```
+
+---
+
+## 🌐 Application & Service Endpoints
+
+Once the application is running (via Local or Docker), access the services using the following URLs:
+
+| Service | Port | URL | Description |
+|---|---|---|---|
+| REST API | `3000` | `http://localhost:3000/api/v1` | Application base endpoint |
+| Swagger Docs | `3000` | `http://localhost:3000/api/docs` | Interactive API documentation |
+| Prisma Studio | `5555` | `http://localhost:5555` | Visual database manager & GUI |
+
+---
+
+## 🛡 Managing User Roles (`USER` to `ADMIN`)
+
+Accessing Admin endpoints (`/api/v1/admin/*`) requires an authenticated user with the `ADMIN` role. You can assign the admin role using either of the following approaches:
+
+### Method 1: Via Prisma Studio GUI (Recommended)
+
+1. Open `http://localhost:5555` in your browser.
+2. Select the `User` model/table.
+3. Locate the target user and double-click the `role` field.
+4. Select or type `ADMIN`.
+5. Click the green **Save 1 change** button at the top.
+
+### Method 2: Via Database Query
+
+Alternatively, run a direct SQL update against the `User` table (e.g. via `psql` or Prisma Studio's SQL runner):
+
+```sql
+UPDATE "User" SET role = 'ADMIN' WHERE email = 'your-email@example.com';
 ```
 
 ---
+
 
 ## 📄 API Documentation (Swagger)
 
@@ -244,7 +317,7 @@ All endpoints include parameter validations, structured error handling (`400`, `
 
 ---
 
-## 📦 Project Structure (suggested)
+## 📦 Project Structure 
 
 ```text
 echogpt-backend/
@@ -252,16 +325,72 @@ echogpt-backend/
 │   ├── schema.prisma
 │   └── migrations/
 ├── src/
-│   ├── auth/
-│   ├── users/
-│   ├── subscriptions/
-│   ├── providers/
-│   ├── chat/
-│   ├── search/
-│   ├── admin/
-│   ├── common/          # guards, interceptors, decorators, filters
-│   ├── config/
+│   ├── common/
+│   │   ├── decorators/
+│   │   │   ├── current-user.decorator.ts
+│   │   │   └── roles.decorator.ts
+│   │   ├── filters/
+│   │   │   └── http-exception.filter.ts
+│   │   ├── guards/
+│   │   │   ├── jwt-auth.guard.ts
+│   │   │   ├── roles.guard.ts
+│   │   │   └── subscription-limit.guard.ts
+│   │   ├── interceptors/
+│   │   │   └── logging.interceptor.ts
+│   │   └── utils/
+│   │       └── encryption.util.ts
+│   ├── modules/
+│   │   ├── admin/
+│   │   │   ├── admin.controller.ts
+│   │   │   ├── admin.module.ts
+│   │   │   └── admin.service.ts
+│   │   ├── auth/
+│   │   │   ├── dto/
+│   │   │   │   ├── login.dto.ts
+│   │   │   │   ├── refresh-token.dto.ts
+│   │   │   │   └── register.dto.ts
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── auth.module.ts
+│   │   │   ├── auth.service.ts
+│   │   │   └── jwt.strategy.ts
+│   │   ├── chat/
+│   │   │   ├── dto/
+│   │   │   │   └── send-prompt.dto.ts
+│   │   │   ├── services/
+│   │   │   ├── chat.controller.ts
+│   │   │   ├── chat.module.ts
+│   │   │   └── chat.service.ts
+│   │   ├── providers/
+│   │   │   ├── dto/
+│   │   │   │   ├── create-provider.dto.ts
+│   │   │   │   └── update-provider.dto.ts
+│   │   │   ├── providers.controller.ts
+│   │   │   ├── providers.module.ts
+│   │   │   └── providers.service.ts
+│   │   ├── search/
+│   │   │   ├── dto/
+│   │   │   │   └── search-query.dto.ts
+│   │   │   ├── search.controller.ts
+│   │   │   ├── search.module.ts
+│   │   │   └── search.service.ts
+│   │   ├── subscriptions/
+│   │   │   ├── subscriptions.controller.ts
+│   │   │   ├── subscriptions.module.ts
+│   │   │   └── subscriptions.service.ts
+│   │   └── users/
+│   │       ├── dto/
+│   │       │   ├── change-password.dto.ts
+│   │       │   └── update-profile.dto.ts
+│   │       ├── users.controller.ts
+│   │       ├── users.module.ts
+│   │       └── users.service.ts
+│   ├── prisma/
+│   │   ├── prisma.module.ts
+│   │   └── prisma.service.ts
+│   ├── app.controller.spec.ts
+│   ├── app.controller.ts
 │   ├── app.module.ts
+│   ├── app.service.ts
 │   └── main.ts
 ├── docker-compose.yml
 ├── Dockerfile
