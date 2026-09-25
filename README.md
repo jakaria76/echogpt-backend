@@ -155,7 +155,7 @@ GROQ_API_KEY=""
 1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/jakaria76/echogpt-backend.git
+   git clone 'https://github.com/jakaria76/echogpt-backend.git'
    cd echogpt-backend
    ```
 

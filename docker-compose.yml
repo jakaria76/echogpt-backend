@@ -34,5 +34,19 @@ services:
     ports:
       - '3000:3000'
 
+  studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: echogpt_studio
+    restart: always
+    depends_on:
+      - postgres
+    command: npx prisma studio --port 5555 --browser none
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/echogpt?schema=public
+    ports:
+      - '5555:5555'
+
 volumes:
   postgres_data:
