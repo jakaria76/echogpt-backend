@@ -1,16 +1,38 @@
+version: '3.8'
+
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: echogpt-postgres
+    container_name: echogpt_postgres
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: echopassword
-      POSTGRES_DB: echogpt_db
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: echogpt
     ports:
-      - '5433:5432'
+      - '5432:5432'
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: echogpt_api
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/echogpt?schema=public
+      JWT_ACCESS_SECRET: default_super_secret_access_jwt_key_2026
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_SECRET: default_super_secret_refresh_jwt_key_2026
+      JWT_REFRESH_EXPIRES_IN: 7d
+      ENCRYPTION_KEY: 12345678901234567890123456789012
+    ports:
+      - '3000:3000'
 
 volumes:
-  pgdata:
+  postgres_data:

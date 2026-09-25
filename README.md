@@ -1,114 +1,274 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# EchoGPT Backend REST API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A scalable, robust, and production-ready backend REST API built for the **EchoGPT Chrome Extension** — a multi-AI chat assistant. This service handles authentication, subscription management, dynamic AI provider orchestration, chat history, and web search, all documented via Swagger/OpenAPI.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 📋 Table of Contents
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- [Architecture Overview](#architecture-overview)
+- [Tech Stack](#tech-stack)
+- [Key Features](#key-features)
+- [Database Schema (ERD Overview)](#database-schema-erd-overview)
+- [Prerequisites](#prerequisites)
+- [Environment Configuration](#environment-configuration)
+- [Local Setup & Installation](#local-setup--installation)
+- [Running via Docker](#running-via-docker)
+- [API Documentation (Swagger)](#api-documentation-swagger)
+- [Security & Architecture Highlights](#security--architecture-highlights)
 
-## Project setup
+---
 
-```bash
-$ npm install
+## 🏗 Architecture Overview
+
+The EchoGPT backend manages user sessions, tracks subscription usage, secures external AI provider credentials, and routes chat/search traffic through a unified, auditable pipeline.
+
+```text
+[ EchoGPT Chrome Extension / Client ]
+                |
+                ▼
+      [ Global Middlewares ] (Helmet, CORS, ValidationPipe)
+                |
+                ▼
+      [ JWT & Roles Guards ] (Authentication & Authorization)
+                |
+        ┌───────────────────────────────┐
+        ▼                               ▼
+ [ User / Chat Flow ]           [ Admin Panel Flow ]
+   ├── Daily Quota Check          ├── Dashboard Metrics
+   ├── Web Search Context         ├── System Health (CPU, RAM, DB Latency)
+   ├── AI Engine Pipeline         └── Real-time Request Audit Logs
+   └── PostgreSQL Persistence
 ```
 
-## Compile and run the project
+---
 
-```bash
-# development
-$ npm run start
+## 🛠 Tech Stack
 
-# watch mode
-$ npm run start:dev
+- **Framework:** Nest.JS (Node.js TypeScript framework)
+- **Database:** PostgreSQL
+- **ORM:** Prisma ORM
+- **Documentation:** Swagger / OpenAPI 3.0
+- **Authentication & Security:** Passport.js, JWT, Bcrypt, Helmet, AES-256-CBC Encryption
+- **AI Integrations:** Groq SDK (OpenAI-compatible), Google GenAI SDK, OpenAI SDK
+- **Containerization:** Docker & Docker Compose
 
-# production mode
-$ npm run start:prod
+---
+
+## ✨ Key Features
+
+### 1. Authentication & Session Lifecycle
+- Registration with automatic subscription provisioning (`FREE` plan with 20 requests/day)
+- JWT Access Token (short-lived) & Refresh Token (long-lived) rotation
+- Secure Logout with instant session revocation in the database
+- Dual-level role enforcement (`USER`, `ADMIN`)
+
+### 2. User Management
+- User Profile retrieval and inline updates (`PATCH /users/profile`)
+- Secure password update with previous-hash verification
+- Account deletion (`DELETE /users/account`) with cascading cleanup
+
+### 3. Subscription & Quota Management
+- Dual-tier subscription architecture: `FREE` (20 req/day) and `PREMIUM` (Unlimited req/day)
+- Dynamic tracking of used requests vs. daily limits with automated rate-limiting
+- Tier upgrade and downgrade capabilities
+
+### 4. Dynamic AI Provider Management
+- Dynamic provider orchestration supporting **OpenAI**, **Anthropic (Claude)**, and **Google Gemini** (via Groq/Gemini)
+- At-rest AES-256-CBC encryption for sensitive API credentials
+- Provider toggling (Active/Inactive) and default model assignment
+
+### 5. Chat Engine & History
+- Multi-turn conversation thread management
+- Context-aware prompt routing and token accounting
+- Conversation creation, listing, retrieval, and deletion
+
+### 6. Web Search API
+- Live query processing and search results caching
+- Search history logging, recent search retrieval, and query suggestions
+
+### 7. Admin Panel & Observability
+- Aggregated metric dashboard (total users, chats, messages, searches, active providers)
+- Real-time hardware telemetry and database query latency checks (`GET /admin/health`)
+- Centralized audit trail logs for all inbound API requests
+
+---
+
+## 🗄 Database Schema (ERD Overview)
+
+The normalized relational PostgreSQL schema contains the following models:
+
+- **User** — Account identity, hashed passwords, roles (`USER`, `ADMIN`)
+- **Session** — Refresh tokens, user-agent fingerprints, and expiration timestamps
+- **Subscription** — Plan tiers (`FREE`, `PREMIUM`), daily limits, and consumption counters
+- **AIProvider** — Third-party model endpoints with AES-256 encrypted API keys
+- **Conversation** — Context threads grouped per user
+- **ChatMessage** — Sequential prompt/response pairs with token counts
+- **WebSearch** — Executed user search queries and metadata
+- **ApiUsageLog** — Comprehensive audit trails of all inbound API traffic
+
+---
+
+## 📋 Prerequisites
+
+Ensure you have the following installed on your machine:
+
+- **Node.js:** v18.0.0 or later (v20+ recommended)
+- **PostgreSQL:** Running instance on port `5432` (or via Docker)
+- **npm** or **yarn**
+
+---
+
+## ⚙️ Environment Configuration
+
+Create a `.env` file in the project root:
+
+```env
+PORT=3000
+NODE_ENV=development
+
+# PostgreSQL Connection String
+DATABASE_URL="postgresql://postgres:password@localhost:5432/echogpt?schema=public"
+
+# Authentication Secrets
+JWT_ACCESS_SECRET="your_jwt_access_secret_key_2026"
+JWT_ACCESS_EXPIRES_IN="15m"
+JWT_REFRESH_SECRET="your_jwt_refresh_secret_key_2026"
+JWT_REFRESH_EXPIRES_IN="7d"
+
+# AES-256 Secret (Exact 32 characters required)
+ENCRYPTION_KEY="12345678901234567890123456789012"
+
+# AI Provider Keys (optional defaults)
+OPENAI_API_KEY=""
+ANTHROPIC_API_KEY=""
+GOOGLE_GENAI_API_KEY=""
+GROQ_API_KEY=""
 ```
 
-## Run tests
+> ⚠️ Never commit your real `.env` file. Use `.env.example` as the shared template.
+
+---
+
+## 🚀 Local Setup & Installation
+
+1. **Clone the repository:**
+
+   ```bash
+   git clone https://github.com/jakaria76/echogpt-backend.git
+   cd echogpt-backend
+   ```
+
+2. **Install dependencies:**
+
+   ```bash
+   npm install
+   ```
+
+3. **Run Prisma Migrations:**
+
+   ```bash
+   npx prisma migrate dev --name init
+   ```
+
+4. **Launch development server:**
+
+   ```bash
+   npm run start:dev
+   ```
+
+5. **Access the API:**
+
+   - **REST API Base URL:** `http://localhost:3000/api/v1`
+   - **Interactive Swagger Documentation:** `http://localhost:3000/api/docs`
+
+---
+
+## 🐳 Running via Docker
+
+To spin up both the NestJS API application and the PostgreSQL database in isolated containers:
 
 ```bash
-# unit tests
-$ npm run test
+# Build and run containers in detached mode
+docker-compose up --build -d
 
-# e2e tests
-$ npm run test:e2e
+# Inspect running containers
+docker-compose ps
 
-# test coverage
-$ npm run test:cov
+# View logs
+docker-compose logs -f
+
+# Stop containers
+docker-compose down
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## 📄 API Documentation (Swagger)
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+All endpoints include parameter validations, structured error handling (`400`, `401`, `403`, `404`, `429`), and Bearer JWT authorization.
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+| Module | Method | Path | Summary | Permission |
+|---|---|---|---|---|
+| Auth | POST | `/api/v1/auth/register` | Register new user account | Public |
+| Auth | POST | `/api/v1/auth/login` | Authenticate user & return tokens | Public |
+| Auth | POST | `/api/v1/auth/refresh` | Refresh access token using refresh token | Public |
+| Auth | POST | `/api/v1/auth/logout` | Revoke session & invalidate tokens | Bearer JWT |
+| Users | GET | `/api/v1/users/profile` | Retrieve active user profile & plan info | Bearer JWT |
+| Users | PATCH | `/api/v1/users/profile` | Update profile information | Bearer JWT |
+| Users | PATCH | `/api/v1/users/change-password` | Change account password | Bearer JWT |
+| Users | DELETE | `/api/v1/users/account` | Permanently terminate user account | Bearer JWT |
+| Subscriptions | GET | `/api/v1/subscriptions/status` | Current quota consumption & remaining | Bearer JWT |
+| Subscriptions | POST | `/api/v1/subscriptions/upgrade` | Upgrade subscription to PREMIUM | Bearer JWT |
+| Providers | POST | `/api/v1/providers` | Configure new AI model provider | Admin Only |
+| Providers | GET | `/api/v1/providers` | List all configured providers | Bearer JWT |
+| Providers | PATCH | `/api/v1/providers/{id}/toggle` | Toggle provider active status | Admin Only |
+| Chat | POST | `/api/v1/chat` | Send prompt and receive AI response | Bearer JWT |
+| Chat | GET | `/api/v1/chat/conversations` | List user conversation threads | Bearer JWT |
+| Search | POST | `/api/v1/search` | Execute web-assisted search query | Bearer JWT |
+| Search | GET | `/api/v1/search/history` | List search history entries | Bearer JWT |
+| Admin | GET | `/api/v1/admin/dashboard` | Aggregated business & activity metrics | Admin Only |
+| Admin | GET | `/api/v1/admin/health` | Real-time database latency & memory health | Admin Only |
+| Admin | GET | `/api/v1/admin/logs` | Centralized API request audit logs | Admin Only |
+
+> Full request/response schemas, error examples, and auth requirements are available in the interactive Swagger UI at `/api/docs`.
+
+---
+
+## 🔒 Security & Architecture Highlights
+
+- **At-Rest Encryption:** Provider API credentials are never stored in plaintext; they are secured using AES-256-CBC ciphering with an initialization vector (IV).
+- **Strict Payload Validation:** Global `ValidationPipe` with `whitelist: true` and `forbidNonWhitelisted: true` to prevent mass-assignment vulnerabilities.
+- **HTTP Hardening:** Integrated `helmet` middleware for standard security headers and configured CORS restrictions.
+- **Failover Protection:** Resilient provider routing logic prevents application crashes during upstream AI service interruptions.
+
+---
+
+## 📦 Project Structure (suggested)
+
+```text
+echogpt-backend/
+├── prisma/
+│   ├── schema.prisma
+│   └── migrations/
+├── src/
+│   ├── auth/
+│   ├── users/
+│   ├── subscriptions/
+│   ├── providers/
+│   ├── chat/
+│   ├── search/
+│   ├── admin/
+│   ├── common/          # guards, interceptors, decorators, filters
+│   ├── config/
+│   ├── app.module.ts
+│   └── main.ts
+├── docker-compose.yml
+├── Dockerfile
+├── .env.example
+└── README.md
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## 📝 License
 
-## Observability
-
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+This project was developed as part of a technical assessment for AppifyDevs.
